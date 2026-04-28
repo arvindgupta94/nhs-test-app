@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NHS Assessment Trainer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #003865;
+    --teal: #006272;
+    --sky: #41B6E6;
+    --green: #009639;
+    --red: #DA291C;
+    --amber: #ED8B00;
+    --white: #FAFAF8;
+    --off: #F0EDE8;
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --border: #D4CFC8;
+    --card: #FFFFFF;
+    --correct-bg: #EBF7EE;
+    --wrong-bg: #FDECEA;
+    --correct-border: #009639;
+    --wrong-border: #DA291C;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--white);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── SCREEN SYSTEM ─── */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ─── HOME SCREEN ─── */
+  #home {
+    background: var(--navy);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .home-bg {
+    position: absolute; inset: 0;
+    background: 
+      radial-gradient(ellipse at 80% 20%, rgba(65,182,230,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 10% 80%, rgba(0,98,114,0.4) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .home-grid {
+    position: absolute; inset: 0;
+    background-image: 
+      linear-gradient(rgba(65,182,230,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(65,182,230,0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+
+  .home-inner {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh;
+    padding: 40px 24px;
+    text-align: center;
+  }
+
+  .home-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(65,182,230,0.15);
+    border: 1px solid rgba(65,182,230,0.3);
+    color: var(--sky);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    padding: 6px 16px; border-radius: 100px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .home-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(42px, 8vw, 88px);
+    color: var(--white);
+    line-height: 1.05;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  .home-title em {
+    font-style: italic;
+    color: var(--sky);
+  }
+
+  .home-subtitle {
+    font-size: 15px; color: rgba(250,250,248,0.55);
+    font-weight: 400; letter-spacing: 0.5px;
+    margin-bottom: 56px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .topic-cards {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px; width: 100%; max-width: 560px;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .topic-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 28px 24px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: left;
+    position: relative; overflow: hidden;
+  }
+
+  .topic-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(65,182,230,0.1), transparent);
+    opacity: 0; transition: opacity 0.25s;
+  }
+
+  .topic-card:hover { 
+    border-color: rgba(65,182,230,0.5);
+    transform: translateY(-3px);
+    background: rgba(255,255,255,0.08);
+  }
+  .topic-card:hover::before { opacity: 1; }
+
+  .topic-card.selected {
+    border-color: var(--sky);
+    background: rgba(65,182,230,0.15);
+  }
+
+  .topic-icon {
+    font-size: 28px; margin-bottom: 12px; display: block;
+  }
+
+  .topic-label {
+    font-size: 18px; font-weight: 700;
+    color: var(--white); margin-bottom: 4px;
+  }
+
+  .topic-desc {
+    font-size: 12px; color: rgba(250,250,248,0.5);
+    font-family: 'DM Mono', monospace; letter-spacing: 0.5px;
+  }
+
+  .home-next {
+    margin-top: 32px;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+
+  /* ─── SET SELECT SCREEN ─── */
+  #setselect {
+    background: var(--off);
+  }
+
+  .topbar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+
+  .back-btn {
+    background: none; border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 14px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 600;
+    color: var(--ink); cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  .back-btn:hover { background: var(--ink); color: var(--white); border-color: var(--ink); }
+
+  .topbar-title {
+    font-size: 15px; font-weight: 700; color: var(--ink);
+  }
+
+  .topbar-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    margin-left: auto;
+  }
+
+  .setselect-inner {
+    padding: 32px 24px; max-width: 720px; margin: 0 auto; width: 100%;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--muted); margin-bottom: 12px;
+  }
+
+  .set-group { margin-bottom: 32px; }
+
+  .set-group-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 1.5px; margin-bottom: 12px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .set-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .set-item {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .set-item:hover { border-color: var(--navy); transform: translateX(4px); }
+
+  .set-item-left { display: flex; flex-direction: column; gap: 4px; }
+  .set-item-name { font-size: 15px; font-weight: 700; }
+  .set-item-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--muted);
+  }
+
+  .set-item-arrow {
+    width: 32px; height: 32px;
+    background: var(--off); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.2s;
+  }
+  .set-item:hover .set-item-arrow { background: var(--navy); color: var(--white); }
+
+  /* ─── MODE SELECT ─── */
+  #modeselect { background: var(--off); }
+
+  .mode-inner {
+    padding: 32px 24px; max-width: 600px; margin: 0 auto; width: 100%;
+  }
+
+  .mode-hero {
+    background: var(--navy);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 24px;
+    color: var(--white);
+    position: relative; overflow: hidden;
+  }
+  .mode-hero::after {
+    content: '';
+    position: absolute; right: -20px; top: -20px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: rgba(65,182,230,0.15);
+  }
+
+  .mode-hero-topic {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--sky);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .mode-hero-set {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px; margin-bottom: 4px;
+  }
+  .mode-hero-count {
+    font-size: 13px; color: rgba(255,255,255,0.5);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .mode-cards { display: flex; flex-direction: column; gap: 12px; }
+
+  .mode-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 24px;
+    display: flex; align-items: center; gap: 20px;
+    cursor: pointer; transition: all 0.25s;
+  }
+  .mode-card:hover { border-color: var(--navy); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+
+  .mode-card-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .mode-warmup .mode-card-icon { background: #FFF3E0; }
+  .mode-practice .mode-card-icon { background: #E8F5E9; }
+  .mode-mock .mode-card-icon { background: #E3F2FD; }
+
+  .mode-card-text { flex: 1; }
+  .mode-card-name { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+  .mode-card-desc { font-size: 13px; color: var(--muted); }
+
+  .mode-card-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 100px;
+    background: var(--off); color: var(--muted);
+  }
+  .mode-mock .mode-card-badge { background: #E3F2FD; color: #1565C0; }
+
+  /* ─── QUIZ SCREEN ─── */
+  #quiz { background: var(--off); }
+
+  .quiz-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .quiz-info { flex: 1; }
+  .quiz-set-name {
+    font-size: 13px; font-weight: 700; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .quiz-mode-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .quiz-progress-wrap { flex: 1; max-width: 180px; }
+  .quiz-progress-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    text-align: right; margin-bottom: 4px;
+  }
+  .quiz-progress-bar {
+    height: 4px; background: var(--border); border-radius: 100px; overflow: hidden;
+  }
+  .quiz-progress-fill {
+    height: 100%; background: var(--navy);
+    border-radius: 100px; transition: width 0.4s ease;
+  }
+
+  .quiz-timer {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px; font-weight: 500;
+    color: var(--navy); padding: 6px 12px;
+    background: var(--off); border-radius: 8px;
+    min-width: 72px; text-align: center;
+  }
+  .quiz-timer.urgent { color: var(--red); background: #FDECEA; animation: pulse 1s infinite; }
+
+  .quiz-body {
+    flex: 1; padding: 24px;
+    max-width: 720px; margin: 0 auto; width: 100%;
+  }
+
+  .q-counter {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .q-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 20px;
+    animation: slideIn 0.3s ease;
+  }
+
+  .q-text {
+    font-size: clamp(15px, 2.5vw, 18px);
+    font-weight: 600; line-height: 1.55;
+    color: var(--ink);
+  }
+
+  /* MCQ OPTIONS */
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .option-btn {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: left;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 500;
+    color: var(--ink);
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 10px;
+    position: relative;
+  }
+
+  .option-letter {
+    width: 26px; height: 26px; flex-shrink: 0;
+    background: var(--off);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; font-weight: 500; color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--navy);
+    background: rgba(0,56,101,0.04);
+  }
+  .option-btn:hover:not(:disabled) .option-letter {
+    background: var(--navy); color: var(--white);
+  }
+
+  .option-btn.selected { border-color: var(--navy); background: rgba(0,56,101,0.06); }
+  .option-btn.correct { border-color: var(--correct-border); background: var(--correct-bg); }
+  .option-btn.correct .option-letter { background: var(--correct-border); color: var(--white); }
+  .option-btn.wrong { border-color: var(--wrong-border); background: var(--wrong-bg); }
+  .option-btn.wrong .option-letter { background: var(--wrong-border); color: var(--white); }
+  .option-btn:disabled { cursor: default; }
+
+  /* INPUT MODE */
+  .input-wrap { margin-top: 20px; }
+  .input-field {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 18px; font-weight: 500;
+    color: var(--ink); background: var(--white);
+    outline: none; transition: border-color 0.2s;
+  }
+  .input-field:focus { border-color: var(--navy); }
+  .input-field.correct { border-color: var(--correct-border); background: var(--correct-bg); }
+  .input-field.wrong { border-color: var(--wrong-border); background: var(--wrong-bg); }
+
+  /* FEEDBACK */
+  .feedback-box {
+    padding: 14px 18px;
+    border-radius: 12px;
+    margin-top: 12px;
+    display: none;
+    animation: fadeIn 0.25s ease;
+  }
+  .feedback-box.correct { background: var(--correct-bg); border: 1px solid var(--correct-border); }
+  .feedback-box.wrong { background: var(--wrong-bg); border: 1px solid var(--wrong-border); }
+  .feedback-box.show { display: block; }
+
+  .feedback-status {
+    font-size: 13px; font-weight: 700;
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .feedback-box.correct .feedback-status { color: var(--correct-border); }
+  .feedback-box.wrong .feedback-status { color: var(--wrong-border); }
+
+  .feedback-explanation {
+    font-size: 13px; color: var(--ink); line-height: 1.5;
+  }
+
+  /* ACTIONS */
+  .quiz-actions {
+    display: flex; gap: 10px; margin-top: 16px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 13px 24px; border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer; border: none; transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--navy); color: var(--white);
+  }
+  .btn-primary:hover { background: #00264d; transform: translateY(-1px); }
+
+  .btn-sky {
+    background: var(--sky); color: var(--white);
+  }
+  .btn-sky:hover { background: #2fa0d4; transform: translateY(-1px); }
+
+  .btn-ghost {
+    background: var(--white); color: var(--ink);
+    border: 1.5px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--ink); }
+
+  .btn-lg { padding: 16px 36px; font-size: 15px; border-radius: 14px; }
+  .btn-full { width: 100%; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+  /* ─── RESULTS SCREEN ─── */
+  #results { background: var(--off); }
+
+  .results-inner {
+    padding: 40px 24px; max-width: 640px; margin: 0 auto; width: 100%;
+  }
+
+  .results-score-card {
+    background: var(--navy);
+    border-radius: 24px;
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 24px;
+    position: relative; overflow: hidden;
+    color: var(--white);
+  }
+
+  .results-score-card::before {
+    content: '';
+    position: absolute; top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(65,182,230,0.12);
+  }
+
+  .results-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--sky);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .results-big-score {
+    font-family: 'DM Serif Display', serif;
+    font-size: 80px; line-height: 1;
+    color: var(--white); margin-bottom: 4px;
+  }
+
+  .results-fraction {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px; color: rgba(255,255,255,0.5);
+    margin-bottom: 20px;
+  }
+
+  .results-percent-bar {
+    height: 8px; background: rgba(255,255,255,0.15);
+    border-radius: 100px; overflow: hidden; margin-bottom: 20px;
+  }
+  .results-percent-fill {
+    height: 100%; border-radius: 100px;
+    transition: width 1s ease;
+  }
+  .results-percent-fill.great { background: var(--green); }
+  .results-percent-fill.ok { background: var(--amber); }
+  .results-percent-fill.low { background: var(--red); }
+
+  .results-msg {
+    font-size: 14px; color: rgba(255,255,255,0.65);
+  }
+
+  .results-breakdown {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden; margin-bottom: 20px;
+  }
+
+  .breakdown-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 1px; font-family: 'DM Mono', monospace;
+  }
+
+  .breakdown-item {
+    padding: 14px 20px;
+    display: flex; align-items: flex-start; gap: 12px;
+    border-bottom: 1px solid var(--off);
+  }
+  .breakdown-item:last-child { border-bottom: none; }
+
+  .breakdown-icon {
+    width: 22px; height: 22px; flex-shrink: 0;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; margin-top: 1px;
+  }
+  .breakdown-icon.c { background: var(--correct-bg); color: var(--correct-border); }
+  .breakdown-icon.w { background: var(--wrong-bg); color: var(--wrong-border); }
+
+  .breakdown-q { font-size: 13px; line-height: 1.4; flex: 1; }
+  .breakdown-q strong { display: block; font-weight: 600; margin-bottom: 2px; }
+  .breakdown-q span { color: var(--muted); font-size: 12px; }
+  .breakdown-correct-ans {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--correct-border);
+    margin-top: 3px;
+  }
+
+  .results-actions {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  /* ─── UTILITIES ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(16px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .hidden { display: none !important; }
+
+  /* MOBILE */
+  @media (max-width: 500px) {
+    .topic-cards { grid-template-columns: 1fr; }
+    .options-grid { grid-template-columns: 1fr; }
+    .quiz-progress-wrap { display: none; }
+    .results-big-score { font-size: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════ HOME ══ -->
+<div id="home" class="screen active">
+  <div class="home-bg"></div>
+  <div class="home-grid"></div>
+  <div class="home-inner">
+    <div class="home-badge">🏥 NHS Assessment Trainer</div>
+    <h1 class="home-title">Prepare to<br><em>Pass.</em></h1>
+    <p class="home-subtitle">Numeracy &amp; Literacy practice — warm-ups, tests, mock exams</p>
+
+    <div class="topic-cards">
+      <div class="topic-card" data-topic="numeracy" onclick="selectTopic('numeracy')">
+        <span class="topic-icon">🔢</span>
+        <div class="topic-label">Numeracy</div>
+        <div class="topic-desc">Arithmetic · Meds · Time</div>
+      </div>
+      <div class="topic-card" data-topic="literacy" onclick="selectTopic('literacy')">
+        <span class="topic-icon">📖</span>
+        <div class="topic-label">Literacy</div>
+        <div class="topic-desc">Grammar · Spelling · Comprehension</div>
+      </div>
+    </div>
+
+    <div class="home-next" id="homeNext" style="display:none;">
+      <button class="btn btn-sky btn-lg" onclick="goToSetSelect()">Choose a Test Set →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ SET SELECT ══ -->
+<div id="setselect" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showScreen('home')">← Back</button>
+    <span class="topbar-title" id="ssTitle">Select a Test</span>
+    <span class="topbar-sub" id="ssTopicTag"></span>
+  </div>
+  <div class="setselect-inner" id="setListContainer"></div>
+</div>
+
+<!-- ══════════════════════════════════════ MODE SELECT ══ -->
+<div id="modeselect" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showScreen('setselect')">← Back</button>
+    <span class="topbar-title">Choose Mode</span>
+  </div>
+  <div class="mode-inner">
+    <div class="mode-hero">
+      <div class="mode-hero-topic" id="mhTopic"></div>
+      <div class="mode-hero-set" id="mhSet"></div>
+      <div class="mode-hero-count" id="mhCount"></div>
+    </div>
+
+    <div class="mode-cards" id="modeCards"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ QUIZ ══ -->
+<div id="quiz" class="screen">
+  <div class="quiz-header">
+    <button class="back-btn" onclick="confirmQuit()">✕ Quit</button>
+    <div class="quiz-info">
+      <div class="quiz-set-name" id="qSetName"></div>
+      <div class="quiz-mode-tag" id="qModeTag"></div>
+    </div>
+    <div class="quiz-progress-wrap">
+      <div class="quiz-progress-label" id="qProgressLabel"></div>
+      <div class="quiz-progress-bar">
+        <div class="quiz-progress-fill" id="qProgressFill"></div>
+      </div>
+    </div>
+    <div class="quiz-timer hidden" id="qTimer">25:00</div>
+  </div>
+
+  <div class="quiz-body">
+    <div class="q-counter" id="qCounter"></div>
+
+    <div class="q-card">
+      <div class="q-text" id="qText"></div>
+
+      <!-- MCQ -->
+      <div class="options-grid hidden" id="optionsGrid"></div>
+
+      <!-- Input -->
+      <div class="input-wrap hidden" id="inputWrap">
+        <input type="text" class="input-field" id="inputField"
+               placeholder="Type your answer…"
+               autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+
+      <div class="feedback-box" id="feedbackBox">
+        <div class="feedback-status" id="feedbackStatus"></div>
+        <div class="feedback-explanation" id="feedbackExp"></div>
+      </div>
+    </div>
+
+    <div class="quiz-actions" id="quizActions"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ RESULTS ══ -->
+<div id="results" class="screen">
+  <div class="topbar">
+    <span class="topbar-title">Results</span>
+  </div>
+  <div class="results-inner">
+    <div class="results-score-card">
+      <div class="results-label" id="rLabel"></div>
+      <div class="results-big-score" id="rScore"></div>
+      <div class="results-fraction" id="rFraction"></div>
+      <div class="results-percent-bar">
+        <div class="results-percent-fill" id="rFill"></div>
+      </div>
+      <div class="results-msg" id="rMsg"></div>
+    </div>
+
+    <div class="results-breakdown" id="rBreakdown" style="display:none;">
+      <div class="breakdown-header">Review</div>
+      <div id="rBreakdownList"></div>
+    </div>
+
+    <div class="results-actions">
+      <button class="btn btn-primary btn-full btn-lg" onclick="retryQuiz()">Try Again</button>
+      <button class="btn btn-ghost btn-full" onclick="showScreen('modeselect')">Change Mode</button>
+      <button class="btn btn-ghost btn-full" onclick="showScreen('home')">🏠 Home</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  DATA — embedded JSON
+// ═══════════════════════════════════════════════
+const DATA = {
+  numeracy: {
+    warmup: [
+      { id:"n-wu1", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"12 × 4 =", answer:"48", acceptedAnswers:["48"] },
+      { id:"n-wu2", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"386 + 221 =", answer:"607", acceptedAnswers:["607"] },
+      { id:"n-wu3", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"10% of 1,200 =", answer:"120", acceptedAnswers:["120"] },
+      { id:"n-wu4", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"75 × 5 =", answer:"375", acceptedAnswers:["375"] },
+      { id:"n-wu5", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"0.45 + 13.6 =", answer:"14.05", acceptedAnswers:["14.05"] },
+      { id:"n-wu6", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"14,256 − 1,865 =", answer:"12391", acceptedAnswers:["12391","12,391"] },
+      { id:"n-wu7", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"30 × 5 =", answer:"150", acceptedAnswers:["150"] },
+      { id:"n-wu8", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"25% of 250 =", answer:"62.5", acceptedAnswers:["62.5"] },
+      { id:"n-wu9", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"£3.47 + £83.43 =", answer:"86.90", acceptedAnswers:["86.90","£86.90","86.9"] },
+      { id:"n-wu10", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"288 ÷ 4 =", answer:"72", acceptedAnswers:["72"] },
+      { id:"n-wu11", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"40% of 900 =", answer:"360", acceptedAnswers:["360"] },
+      { id:"n-wu12", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"½ of 20,000 =", answer:"10000", acceptedAnswers:["10000","10,000"] },
+      { id:"n-wu13", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"82 + 45 + 19 =", answer:"146", acceptedAnswers:["146"] },
+      { id:"n-wu14", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"¾ of 150,000 =", answer:"112500", acceptedAnswers:["112500","112,500"] },
+      { id:"n-wu15", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"860 ÷ 20 =", answer:"43", acceptedAnswers:["43"] },
+      { id:"n-wu16", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"2318 − 97 =", answer:"2221", acceptedAnswers:["2221","2,221"] },
+      { id:"n-wu17", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"27 × 5 =", answer:"135", acceptedAnswers:["135"] },
+      { id:"n-wu18", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"¼ of 60 =", answer:"15", acceptedAnswers:["15"] },
+      { id:"n-wu19", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"£2.79 − £1.68 =", answer:"1.11", acceptedAnswers:["1.11","£1.11"] },
+      { id:"n-wu20", set:"warmup1", setName:"Numeracy Warm-Up 1", type:"input", question:"42.4 + 234.7 =", answer:"277.1", acceptedAnswers:["277.1"] },
+      { id:"n-wu2-1", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"9 × 9 + 3 =", answer:"84", acceptedAnswers:["84"] },
+      { id:"n-wu2-2", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"28 × 2 =", answer:"56", acceptedAnswers:["56"] },
+      { id:"n-wu2-3", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"2 × 2 × 4 =", answer:"16", acceptedAnswers:["16"] },
+      { id:"n-wu2-4", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"£48.40 split 4 ways =", answer:"12.10", acceptedAnswers:["12.10","£12.10","12.1"] },
+      { id:"n-wu2-5", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"35% of 180 =", answer:"63", acceptedAnswers:["63"] },
+      { id:"n-wu2-6", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"£23.89 + £11.27 =", answer:"35.16", acceptedAnswers:["35.16","£35.16"] },
+      { id:"n-wu2-7", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"What is 30% of 200?", answer:"60", acceptedAnswers:["60"] },
+      { id:"n-wu2-8", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"40.02 − 28.6 =", answer:"11.42", acceptedAnswers:["11.42"] },
+      { id:"n-wu2-9", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"78 ÷ 4 =", answer:"19.5", acceptedAnswers:["19.5"] },
+      { id:"n-wu2-10", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"3/5 of 700 =", answer:"420", acceptedAnswers:["420"] },
+      { id:"n-wu2-11", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"18 × 3 =", answer:"54", acceptedAnswers:["54"] },
+      { id:"n-wu2-12", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"146 − 31 =", answer:"115", acceptedAnswers:["115"] },
+      { id:"n-wu2-13", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"150 ÷ 5 =", answer:"30", acceptedAnswers:["30"] },
+      { id:"n-wu2-14", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"11.4 × 0.3 =", answer:"3.42", acceptedAnswers:["3.42"] },
+      { id:"n-wu2-15", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"291 + 578 =", answer:"869", acceptedAnswers:["869"] },
+      { id:"n-wu2-16", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"400 − 20% =", answer:"320", acceptedAnswers:["320"] },
+      { id:"n-wu2-17", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"548 × 3 =", answer:"1644", acceptedAnswers:["1644","1,644"] },
+      { id:"n-wu2-18", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"60 × 6 =", answer:"360", acceptedAnswers:["360"] },
+      { id:"n-wu2-19", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"28.1 − 16.7 =", answer:"11.4", acceptedAnswers:["11.4"] },
+      { id:"n-wu2-20", set:"warmup2", setName:"Numeracy Warm-Up 2", type:"input", question:"£5.34 + 169p =", answer:"7.03", acceptedAnswers:["7.03","£7.03"] }
+    ],
+    practice: [
+      { id:"np1-1", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"120 people undertake an NHS assessment. 1/3 finish in under half an hour. How many did NOT finish in under half an hour?", options:["90","80","85","70"], answer:"80", explanation:"120 ÷ 3 = 40 (one third finished). So 80 (two thirds) did not." },
+      { id:"np1-2", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"What is 3/5 of 700?", options:["420","450","380","400"], answer:"420", explanation:"700 ÷ 5 × 3 = 420." },
+      { id:"np1-3", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"There are 4,000 millilitres of water in a jug. If 1 litre = 1,000ml, how many litres?", options:["3.5 litres","3 litres","5 litres","4 litres"], answer:"4 litres", explanation:"4,000 ÷ 1,000 = 4 litres." },
+      { id:"np1-4", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"What is 120 multiplied by 13?", options:["1,560","1,450","1,580","1,410"], answer:"1,560", explanation:"120 × 13 = 1,560." },
+      { id:"np1-5", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"Find 60% of £45.00.", options:["£26.50","£28.00","£26.00","£27.00"], answer:"£27.00", explanation:"£45 ÷ 100 × 60 = £27." },
+      { id:"np1-6", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"A packet of biscuits weighs 120g. Find the weight of 9 packets.", options:["1,000g","1,120g","1,080g","1,280g"], answer:"1,080g", explanation:"120 × 9 = 1,080g." },
+      { id:"np1-7", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"What is 24/48 in its simplest form?", options:["1/2","1/4","2/3","1/3"], answer:"1/2", explanation:"Both divisible by 24: 24÷24=1, 48÷24=2. Answer = 1/2." },
+      { id:"np1-8", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"Surgery staff start at 08:45. After 15 min prep and 25 min briefing, what time is the first appointment?", options:["08:50","09:25","09:00","08:30"], answer:"09:25", explanation:"08:45 + 15 = 09:00. 09:00 + 25 = 09:25." },
+      { id:"np1-9", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"At least 1 nurse per 8 patients. Minimum nurses needed for 138 patients?", options:["21","20","18","16"], answer:"18", explanation:"138 ÷ 8 = 17.25, rounded up to 18." },
+      { id:"np1-10", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"What is one quarter of 6 hours?", options:["2 hours","1 hour 45 mins","1 hour 30 mins","2 hour 15 mins"], answer:"1 hour 30 mins", explanation:"6×60=360 min. 360÷4=90 min = 1hr 30min." },
+      { id:"np1-11", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"James runs from 4.50pm to 5.20pm at 7 km/h. How far did he go?", options:["3.5km","2.8km","3.6km","4.1km"], answer:"3.5km", explanation:"30 min = 0.5h. Distance = 7 × 0.5 = 3.5km." },
+      { id:"np1-12", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"Lisa cycles at 8 km/h for 4 hours. How far does she travel?", options:["28km","32km","34km","29km"], answer:"32km", explanation:"Distance = 8 × 4 = 32km." },
+      { id:"np1-13", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"Paula leaves at 05:32am. Walks 7min to bus stop, waits 8min, bus 34min, walks 15min to hospital. Arrival time?", options:["06:36","07:01","06:40","06:28"], answer:"06:36", explanation:"05:32+7=05:39+8=05:47+34=06:21+15=06:36." },
+      { id:"np1-14", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"Medication A: 12mg × 4/day, B: 7mg × 5/day, C: 14mg × 2/day. Total mg per day?", options:["101mg","108mg","111mg","122mg"], answer:"111mg", explanation:"48+35+28=111mg." },
+      { id:"np1-15", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"Over 14 days, combined intake of Med A (12mg × 4/day) and Med C (14mg × 2/day)?", options:["1,048mg","1,064mg","1,108mg","1,096mg"], answer:"1,064mg", explanation:"A: 48×14=672. C: 28×14=392. Total=1,064mg." },
+      { id:"np1-16", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"Administer 18mg of Medication A (12mg/100ml). How much in ml?", options:["180ml","200ml","130ml","150ml"], answer:"150ml", explanation:"12mg=100ml, so 18mg=150ml." },
+      { id:"np1-17", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"Drive 17 miles at 30mph, leaving at 14:15. What time do you arrive?", options:["14:26","15:07","14:49","15:22"], answer:"14:49", explanation:"17 miles at 30mph = 34 min. 14:15+34=14:49." },
+      { id:"np1-18", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"What two numbers come next? 2, 4, 8, 16, 32, 64, ...", options:["72 and 84","128 and 256","148 and 256","128 and 156"], answer:"128 and 256", explanation:"Doubles each time: 64×2=128, 128×2=256." },
+      { id:"np1-19", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"Sandeep spends £3.25+£0.90+£2.75+50p = £7.40. With 30% NHS discount, how much is charged?", options:["£3.78","£5.18","£4.24","£5.48"], answer:"£5.18", explanation:"£7.40 × 70% = £5.18." },
+      { id:"np1-20", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"150 mattresses at £378 each. Total cost?", options:["£49,000","£38,600","£56,700","£59,000"], answer:"£56,700", explanation:"378 × 150 = £56,700." },
+      { id:"np1-21", set:"practice1", setName:"Numeracy Practice 1", type:"mcq", question:"NHS magazine: 16 pages clinical, 8 pages social. Ratio of clinical to social (simplest form)?", options:["4 : 3","5 : 2","3 : 1","2 : 1"], answer:"2 : 1", explanation:"16:8 ÷ 8 = 2:1." },
+      { id:"np2-1", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"How many grams in 2.5 kilograms?", options:["2,300g","2,500g","3,000g","1,500g"], answer:"2,500g", explanation:"2.5 × 1,000 = 2,500g." },
+      { id:"np2-2", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Average temp over 5 days was 65°. Temps were 67, 67, 70, 68 on four days. What was day 5?", options:["55","61","53","48"], answer:"53", explanation:"65×5=325. 325−(67+67+70+68)=53." },
+      { id:"np2-3", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Julia wakes at 6:40am. 16min to get ready, 12min breakfast, 47min travel. When does she arrive?", options:["06:45am","07:35am","07:55am","08:05am"], answer:"07:55am", explanation:"6:40 + 75 min = 07:55am." },
+      { id:"np2-4", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Spend £14.45 train + £11.35 lunch + £32.77 theatre from £100. How much left?", options:["£39.90","£41.43","£46.67","£34.20"], answer:"£41.43", explanation:"100−14.45−11.35−32.77=£41.43." },
+      { id:"np2-5", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Hospital porter shoes last 24 weeks. How many pairs in an 18-year career?", options:["39","43","41","36"], answer:"39", explanation:"18×52=936 weeks. 936÷24=39." },
+      { id:"np2-6", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Nurse works 8hrs/day, three 20-min breaks + 1hr lunch, 5 days/week. Hours after 7 weeks?", options:["200","387","245","210"], answer:"210", explanation:"8−2=6hrs/day. 6×5×7=210." },
+      { id:"np2-7", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Floor needs 240 tiles. Man buys 18 boxes of 6 tiles. How many more boxes needed?", options:["18 boxes","25 boxes","22 boxes","31 boxes"], answer:"22 boxes", explanation:"18×6=108. 240−108=132. 132÷6=22 boxes." },
+      { id:"np2-8", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"2hr 25min call at 9p per 5 minutes. Cost?", options:["£1.89","£1.98","£2.61","£2.46"], answer:"£2.61", explanation:"145 min ÷ 5 = 29 units. 29 × £0.09 = £2.61." },
+      { id:"np2-9", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Jessen walks 3 miles in 45 minutes. Walking pace?", options:["3.5 mph","4 mph","5 mph","3.8 mph"], answer:"4 mph", explanation:"3 ÷ 0.75 = 4 mph." },
+      { id:"np2-10", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Mrs Fuller returns: t-shirt £12.95, shoes £85.99, dress £17.99, jeans £22.99. Total refund?", options:["£139.92","£127.89","£142.67","£136.08"], answer:"£139.92", explanation:"12.95+85.99+17.99+22.99=£139.92." },
+      { id:"np2-11", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Gerard walks 6hrs: 3hrs at 4km/h, 1hr at 3.5km/h, 2hrs at 3km/h. Total distance?", options:["24.9km","21.5km","23.7km","19.9km"], answer:"21.5km", explanation:"12+3.5+6=21.5km." },
+      { id:"np2-12", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"70% of hospital beds occupied, 48 are not. Total beds?", options:["210","172","160","145"], answer:"160", explanation:"48=30%. 48÷30×100=160." },
+      { id:"np2-13", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"3/5 of 85 staff received training. How many have NOT received it?", options:["48","39","29","34"], answer:"34", explanation:"85÷5=17. 17×2=34 (the untrained 2/5)." },
+      { id:"np2-14", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"18g fat per 100g chocolate. Grams of fat in 750g?", options:["135g","123g","147g","132g"], answer:"135g", explanation:"0.18 × 750 = 135g." },
+      { id:"np2-15", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Flight leaves 05:10, 17hr 15min flight, 2hrs behind. Arrival time?", options:["20:15","20:25","21:10","21:25"], answer:"20:25", explanation:"05:10+17h15m=22:25. 22:25−2hrs=20:25." },
+      { id:"np2-16", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Patient has pulse of 45 every 20 seconds. Pulse rate per minute?", options:["135 bpm","142 bpm","120 bpm","129 bpm"], answer:"135 bpm", explanation:"60÷20=3. 3×45=135 bpm." },
+      { id:"np2-17", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Pulse checked 6 times: 107, 89, 96, 67, 58, 74. Average bpm (rounded)?", options:["95 bpm","105 bpm","82 bpm","100 bpm"], answer:"82 bpm", explanation:"491÷6=81.83, rounded to 82 bpm." },
+      { id:"np2-18", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"¾ as a percentage?", options:["67%","70%","75%","85%"], answer:"75%", explanation:"3÷4×100=75%." },
+      { id:"np2-19", set:"practice2", setName:"Numeracy Practice 2", type:"mcq", question:"Ambulance travels 128 miles in 4 hours. Speed?", options:["36 mph","32 mph","42 mph","40 mph"], answer:"32 mph", explanation:"128÷4=32 mph." },
+      { id:"np3-1", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"1,300mg prescribed over 10 days. Value in grams?", options:["1.3g","2.2g","2.1g","1.7g"], answer:"1.3g", explanation:"1,300÷1,000=1.3g." },
+      { id:"np3-2", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"0.85 litres of medication. Value in millilitres?", options:["855ml","850ml","750ml","800ml"], answer:"850ml", explanation:"0.85×1,000=850ml." },
+      { id:"np3-3", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"Medication B (7mg, 5× daily) for 7 days. How many tablets?", options:["45","41","35","28"], answer:"35", explanation:"7 days × 5 = 35 tablets." },
+      { id:"np3-4", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"50 litres of soup for 250 patients. How many ml per patient?", options:["200ml","150ml","250ml","350ml"], answer:"200ml", explanation:"50,000ml ÷ 250 = 200ml." },
+      { id:"np3-5", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"What is 40kg in grams?", options:["400g","40,000g","400,000g","40g"], answer:"40,000g", explanation:"40×1,000=40,000g." },
+      { id:"np3-6", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"Pulse rate 20 beats every 10 seconds. Beats per minute?", options:["100 bpm","130 bpm","120 bpm","125 bpm"], answer:"120 bpm", explanation:"60÷10=6. 6×20=120 bpm." },
+      { id:"np3-7", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"1,300 calories in a tray; each patient needs 225 calories. How many patients fed (rounded)?", options:["7","6","9","8"], answer:"6", explanation:"1300÷225=5.77, rounded to 6." },
+      { id:"np3-8", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"One tray feeds 6. How many trays to feed 80 patients (rounded)?", options:["10","12","9","13"], answer:"13", explanation:"80÷6=13.3, rounded to 13." },
+      { id:"np3-9", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"5 people weigh 70kg each, 5 weigh 75kg each. Average weight?", options:["75.8kg","56kg","72.5kg","65kg"], answer:"72.5kg", explanation:"(350+375)÷10=72.5kg." },
+      { id:"np3-10", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"Nurse earns £32,000/year. Earnings in 15 years?", options:["£520,000","£480,000","£490,000","£390,000"], answer:"£480,000", explanation:"£32,000×15=£480,000." },
+      { id:"np3-11", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"Journey takes 6hr 55min; ambulance stops 47 extra minutes. New duration?", options:["5 hr 58 min","6 hr 55 min","7 hr 28 min","7 hr 42 min"], answer:"7 hr 42 min", explanation:"6hr 55min+47min=7hr 42min." },
+      { id:"np3-12", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"4 colleagues split £44.80 restaurant bill equally. Each pays?", options:["£13.89","£12.47","£11.20","£15.25"], answer:"£11.20", explanation:"£44.80÷4=£11.20." },
+      { id:"np3-13", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"1,610 metres per mile. How many metres in 4 miles?", options:["6,440 m","5,860 m","7,200 m","6,250 m"], answer:"6,440 m", explanation:"4×1,610=6,440 metres." },
+      { id:"np3-14", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"£97.70/month council tax. Quarterly payment?", options:["£304.87","£285.45","£311.78","£293.10"], answer:"£293.10", explanation:"£97.70×3=£293.10." },
+      { id:"np3-15", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"Ambulance speeds: 30, 65, 44, 50 km/h over 4 hours. Average speed?", options:["41.85 km/h","36.10 km/h","47.25 km/h","43.20 km/h"], answer:"47.25 km/h", explanation:"189÷4=47.25 km/h." },
+      { id:"np3-16", set:"practice3", setName:"Numeracy Practice 3", type:"mcq", question:"Radiographer: 8hr/day, three 20-min breaks + 1hr lunch, 5 days/week. Hours after 4 weeks?", options:["100 hours","170 hours","120 hours","135 hours"], answer:"120 hours", explanation:"6hrs/day×5×4=120 hours." }
+    ],
+    mock: [
+      { id:"nm1-1", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Stacey leaves at 07:40, 7min walk, bus departs 07:50, 43min journey, 12min walk to hospital. Arrival time?", options:["08:32","08:16","08:42","08:45"], answer:"08:45", explanation:"Bus departs 07:50+43min=08:33+12min=08:45." },
+      { id:"nm1-2", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Mohammad leaves 07:51, 7min walk, train departs 08:02, 31min journey, 11min walk. Arrival time?", options:["08:55","08:54","08:44","08:34"], answer:"08:44", explanation:"08:02+31=08:33+11=08:44." },
+      { id:"nm1-3", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Pulse: 27 beats per 20 seconds. Beats per minute?", options:["81","54","47","127"], answer:"81", explanation:"60÷20=3. 3×27=81 bpm." },
+      { id:"nm1-4", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Pulse: 17 beats per 10 seconds. Beats per minute?", options:["170","120","102","127"], answer:"102", explanation:"60÷10=6. 6×17=102 bpm." },
+      { id:"nm1-5", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Pulse: 65 beats per 30 seconds. Beats per minute?", options:["95","130","125","135"], answer:"130", explanation:"60÷30=2. 2×65=130 bpm." },
+      { id:"nm1-6", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Patient prescribed 75mg once daily. Mg per week?", options:["375mg","750mg","525mg","252mg"], answer:"525mg", explanation:"75×7=525mg." },
+      { id:"nm1-7", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"8mg medication 3× daily. Mg in 5 days?", options:["24mg","240mg","140mg","120mg"], answer:"120mg", explanation:"8×3=24/day. 24×5=120mg." },
+      { id:"nm1-8", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"15mg medication 6× daily. Mg in 14 days?", options:["1,260mg","90mg","210mg","1,600mg"], answer:"1,260mg", explanation:"15×6=90/day. 90×14=1,260mg." },
+      { id:"nm1-9", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Med A (15mg × 1/day) + Med B (50mg × 2/day) + Med C (75mg × 5/day). Total mg in 10 days?", options:["5,050mg","4,750mg","4,900mg","5,600mg"], answer:"4,900mg", explanation:"(15+100+375)=490/day. 490×10=4,900mg." },
+      { id:"nm1-10", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Med A (8mg × 3/day) + Med B (15mg × 6/day) + Med C (35mg × 2/day). Total mg in 7 days?", options:["798mg","630mg","1,918mg","1,288mg"], answer:"1,288mg", explanation:"(24+90+70)=184/day. 184×7=1,288mg." },
+      { id:"nm1-11", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Susan cycles 45min (360 cal/hr) + treadmill 20min (300 cal/hr). Calories burned?", options:["510 calories","910 calories","660 calories","370 calories"], answer:"370 calories", explanation:"Cycling:360×0.75=270. Treadmill:300×0.333=100. Total≈370." },
+      { id:"nm1-12", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Robert cycles (350 cal/hr) + rows (300 cal per 30min), 4× a week. Total weekly calories?", options:["1,660 calories","2,600 calories","1,800 calories","650 calories"], answer:"2,600 calories", explanation:"350+300=650 per session. 650×4=2,600." },
+      { id:"nm1-13", set:"mock1", setName:"Numeracy Mock 1", type:"mcq", question:"Patient needs 60 days' worth of tablets, 3 per day. You have 75. How many do you owe?", options:["95","110","105","115"], answer:"105", explanation:"3×60=180 needed. 180−75=105 owed." }
+    ]
+  },
+  literacy: {
+    warmup: [
+      { id:"lw1", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Marcus is not as bright as Andrew. Who is brighter?", options:["Andrew","Marcus","Neither"], answer:"Andrew", explanation:"If Marcus is not as bright as Andrew, then Andrew is brighter." },
+      { id:"lw2", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Sharon is taller than Sheila. Who is the tallest?", options:["Sharon","Sheila","Neither"], answer:"Sharon", explanation:"Sharon is taller, so Sharon is the tallest." },
+      { id:"lw3", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Pauline is stronger than Beverley. Who is the weaker of the two?", options:["Pauline","Beverley","Neither"], answer:"Beverley", explanation:"Pauline is stronger, so Beverley is weaker." },
+      { id:"lw4", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Gary is lighter than Frederick. Who is the heavier?", options:["Gary","Frederick","Neither"], answer:"Frederick", explanation:"Gary is lighter, so Frederick is heavier." },
+      { id:"lw5", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"The black car is faster than the white car. Which car is the quickest?", options:["Black car","White car","Neither"], answer:"Black car", explanation:"Black car is faster = quickest." },
+      { id:"lw6", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Rachel runs faster than her sister Georgia. Who runs the slowest?", options:["Georgia","Rachel","Neither"], answer:"Georgia", explanation:"Rachel is faster, so Georgia is slowest." },
+      { id:"lw7", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"David has more money than Arnold. Who is the poorer?", options:["Arnold","David","Neither"], answer:"Arnold", explanation:"David has more money, so Arnold is poorer." },
+      { id:"lw8", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Jill is weaker than Bill. Who is the strongest?", options:["Jill","Bill","Neither"], answer:"Bill", explanation:"Jill is weaker, so Bill is the strongest." },
+      { id:"lw9", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Sadie's shoe size is 7 and Mary's is 9. Who needs the larger size?", options:["Mary","Sadie","Neither"], answer:"Mary", explanation:"Size 9 > size 7, so Mary needs larger shoes." },
+      { id:"lw10", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Pete is faster than Rick. Who is the slowest?", options:["Pete","Rick","Neither"], answer:"Rick", explanation:"Pete is faster, so Rick is slowest." },
+      { id:"lw11", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Alphabetical order of: Delightful, Delicious, Delayed, Delicate. Which is third?", options:["Delightful","Delicious","Delayed","Delicate"], answer:"Delicious", explanation:"Alphabetically: Delayed, Delicate, Delicious, Delightful. Third = Delicious." },
+      { id:"lw12", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Mark > Jane > Nigel (speed). Nigel < Bill. Bill > Mark. Who is the slowest?", options:["Nigel","Jane","Bill","Mark"], answer:"Nigel", explanation:"Order: Bill>Mark>Jane>Nigel. Nigel is slowest." },
+      { id:"lw13", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Chair is to sit as ladder is to?", options:["Climb","Step","Bridge","Metal"], answer:"Climb", explanation:"A chair is used to sit; a ladder is used to climb." },
+      { id:"lw14", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Alphabetical order: Believe, Beast, Belief, Bereaved. Which is second?", options:["Believe","Beast","Belief","Bereaved"], answer:"Belief", explanation:"Beast, Belief, Believe, Bereaved. Second = Belief." },
+      { id:"lw15", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Hayley sleeps 10 hours; Julie sleeps 650 minutes. Who sleeps longest?", options:["Hayley","Julie","Neither"], answer:"Julie", explanation:"10hr=600min. 650 > 600, so Julie sleeps longer." },
+      { id:"lw16", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"George is sadder than Mark. Who is the happier of the two?", options:["Mark","George","Neither"], answer:"Mark", explanation:"George is sadder, so Mark is happier." },
+      { id:"lw17", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Hammer is to nail as Bat is to?", options:["Fly","Ball","Cricket","Hit"], answer:"Ball", explanation:"A hammer strikes a nail; a bat strikes a ball." },
+      { id:"lw18", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Which word has the most vowels? Reasonable, Combination, Vegetables, Audaciously", options:["Reasonable","Combination","Vegetables","Audaciously"], answer:"Audaciously", explanation:"Audaciously has 6 vowels (a, u, a, i, o, u)." },
+      { id:"lw19", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"Which word has the fewest vowels? Barber, Radio, Disastrous, March", options:["Barber","Radio","Disastrous","March"], answer:"March", explanation:"March has only 1 vowel (a)." },
+      { id:"lw20", set:"lwarmup1", setName:"Literacy Warm-Up 1", type:"mcq", question:"'The mechanic worked on the car for 3 hours. At the end, he was _____'", options:["home","rich","exhausted","thinking"], answer:"exhausted", explanation:"After 3 hours of manual work, exhausted makes the most sense." },
+      { id:"lw2-1", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which is the odd one out? Car, Aeroplane, Train, Bicycle, House", options:["Car","Aeroplane","Train","Bicycle","House"], answer:"House", explanation:"House is not a mode of transport — the others all are." },
+      { id:"lw2-2", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which is the odd one out? Right, White, Dart, Bright, Sight", options:["Right","White","Dart","Bright","Sight"], answer:"Dart", explanation:"Right, White, Bright, Sight all rhyme with '-ight'. Dart does not." },
+      { id:"lw2-3", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which word will 'IN' NOT work with to make a longer word? direct, famous, desirable, cart", options:["direct","famous","desirable","cart"], answer:"cart", explanation:"Indirect, infamous, indesirable all work. 'Incart' is not a word." },
+      { id:"lw2-4", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which is the odd one out? Pink, Salt, Ball, Red, Grey", options:["Pink","Salt","Ball","Red","Grey"], answer:"Red", explanation:"Pink, Salt, Ball, Grey can all precede or follow 'Red'. Wait — Salt is odd: the others are all colours except Salt (a substance)." },
+      { id:"lw2-5", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which is the odd one out? Run, Jog, Walk, Sit, Sprint", options:["Run","Jog","Walk","Sit","Sprint"], answer:"Sit", explanation:"Run, Jog, Walk, Sprint are all forms of locomotion. Sit is not." },
+      { id:"lw2-6", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which is the odd one out? Eagle, Plane, Squirrel, Cloud, Sparrow", options:["Eagle","Plane","Squirrel","Cloud","Sparrow"], answer:"Squirrel", explanation:"Eagle, Plane, Cloud, Sparrow are all things found in the sky. Squirrel is not." },
+      { id:"lw2-7", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which is the odd one out? Gold, Ivory, Platinum, Bronze, Silver", options:["Gold","Ivory","Platinum","Bronze","Silver"], answer:"Ivory", explanation:"Gold, Platinum, Bronze, Silver are all metals. Ivory is not." },
+      { id:"lw2-8", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which is the odd one out? Pond, River, Stream, Brook, Ocean", options:["Pond","River","Stream","Brook","Ocean"], answer:"Pond", explanation:"River, Stream, Brook, Ocean are all flowing or vast bodies of water; a Pond is still and small. Pond is the odd one out." },
+      { id:"lw2-9", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Best words for the sentence: 'The man ____ to walk along the beach. He threw the stick and the dog _____ it'", options:["Hated/Chose","Decided/Wanted","Liked/Chased","Hurried/Chased"], answer:"Liked/Chased", explanation:"'Liked to walk' and 'chased it' both make natural, logical sense." },
+      { id:"lw2-10", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Best word: 'David decided it was time to turn _____ and go back home.'", options:["up","in","home","around"], answer:"around", explanation:"'Turn around and go back' is the natural phrase." },
+      { id:"lw2-11", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Best word: 'We would be _____ to hear any comments you may have.'", options:["pleased","worried","available","suited"], answer:"pleased", explanation:"'Pleased to hear comments' is the natural, positive phrasing." },
+      { id:"lw2-12", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which is the odd one out? Cat, Dog, Hamster, Owl", options:["Cat","Dog","Hamster","Owl"], answer:"Owl", explanation:"Cat, Dog, Hamster are common domestic pets. Owl is not typically kept as a pet." },
+      { id:"lw2-13", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which is the odd one out? Wood, Chair, Table, Stool", options:["Wood","Chair","Table","Stool"], answer:"Wood", explanation:"Chair, Table, Stool are all furniture items. Wood is a material." },
+      { id:"lw2-14", set:"lwarmup2", setName:"Literacy Warm-Up 2", type:"mcq", question:"Which is the odd one out? Football, Wrestling, Golf, Rugby", options:["Football","Wrestling","Golf","Rugby"], answer:"Wrestling", explanation:"Football, Golf, Rugby are ball sports. Wrestling does not use a ball." }
+    ],
+    practice: [
+      { id:"lp1-1", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Text: 'He caught the train at 3pm, which is later than expected. He was supposed to arrive at half past 2.' What time was Terry supposed to arrive?", options:["13:00","13:45","15:00","14:30"], answer:"14:30", explanation:"Half past 2 = 14:30." },
+      { id:"lp1-2", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Passage contains 'demonstartes'. Which word is spelt incorrectly?", options:["Naturally","actually","demonstrates","initiatives"], answer:"demonstrates", explanation:"It should be 'demonstrates', not 'demonstartes'." },
+      { id:"lp1-3", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Passage contains: 'comunication', 'farely', 'stuctured', 'comprehensibel'. How many spelling errors?", options:["3","5","4","6"], answer:"4", explanation:"Four words misspelt: communication, fairly, structured, comprehensible." },
+      { id:"lp1-4", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Ahmed wakes, makes tea after wash, gets dressed, does washing after breakfast. Correct order?", options:["Wake up; wash; make tea; do washing; breakfast; get dressed","Wake up; wash; make tea; get dressed; breakfast; do washing","Make tea; Wake up; wash; breakfast; get dressed; do washing","Wake up; make tea; wash; breakfast; do washing; get dressed"], answer:"Wake up; wash; make tea; get dressed; breakfast; do washing", explanation:"Wake → wash → tea (after wash) → get dressed → breakfast → washing (after breakfast)." },
+      { id:"lp1-5", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Tomorrow morning, I _____ play football. We're going to win, and then _____ some ice cream.", options:["will, bought","won't, buy","did, purchased","will, buy"], answer:"will, buy", explanation:"Future tense: 'will play' and 'will buy'." },
+      { id:"lp1-6", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Which word describes something that cannot be identified as different or distinct?", options:["Indistinguishable","Indescribable","Counterfeit","Differential"], answer:"Indistinguishable", explanation:"Indistinguishable = cannot be told apart or identified as distinct." },
+      { id:"lp1-7", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Which word describes something untidy or poorly-kept?", options:["Crumpled","Marinated","Dishevelled","Bemused"], answer:"Dishevelled", explanation:"Dishevelled = untidy or in disorder." },
+      { id:"lp1-8", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Which word describes something convincing or believable?", options:["Presumptuous","Incredible","Assumptive","Credible"], answer:"Credible", explanation:"Credible = capable of being believed; convincing." },
+      { id:"lp1-9", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Which word fits both? (Safe, Steady) (Hay, Jodhpurs)", options:["Chickens","Stable","Farm","Sky"], answer:"Stable", explanation:"Stable = safe/steady AND where hay and riding gear are kept." },
+      { id:"lp1-10", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Which word fits both? (Power, Watt) (Ram, Assault)", options:["Punching","Kicking","Battery","Boxing"], answer:"Battery", explanation:"Battery = electrical power unit AND violent assault/ramming." },
+      { id:"lp1-11", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Speaker 1 believes public transport would suffer without grammar. True, False or Impossible to say?", options:["True","False","Impossible to say"], answer:"True", explanation:"Speaker 1 states: 'Public transport would be utterly disrupted.'" },
+      { id:"lp1-12", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Both speakers agree grammar has a sustained impact on public life. True, False or Impossible to say?", options:["True","False","Impossible to say"], answer:"True", explanation:"Both speakers reference grammar's impact on public life." },
+      { id:"lp1-13", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Speaker 2 regards book relatability as more important than grammar. True, False or Impossible to say?", options:["True","False","Impossible to say"], answer:"Impossible to say", explanation:"Speaker 2 discusses understanding a book but doesn't specifically reference 'relatability'." },
+      { id:"lp1-14", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Identify the correct sentence:", options:["Harriet and James buried they're treasure in the back garden. No one would ever know.","Harriet and James buried their treasure in the back garden. No one would ever know.","Harriet and James berried their treasure in the back garden. No one would ever know.","Harriet and James buried their treasure in the back garden. No one would ever no."], answer:"Harriet and James buried their treasure in the back garden. No one would ever know.", explanation:"'Their' = possession. 'Know' = knowledge. Both correctly used in option B." },
+      { id:"lp1-15", set:"lpractice1", setName:"Literacy Practice 1", type:"mcq", question:"Identify the correct sentence:", options:["Were going to spend all of our time at the beach while the whether is nice.","We're going to spend all of are time at the beach while the weather is nice.","We're going to spend all of our time at the beach while the weather is nice.","We're going to spend all of are time at the beach while the weather is nice."], answer:"We're going to spend all of our time at the beach while the weather is nice.", explanation:"'We're' (we are), 'our' (possession), 'weather' (climate) — all correct." },
+      { id:"lp2-1", set:"lpractice2", setName:"Literacy Practice 2", type:"mcq", question:"Text: 'Lucy's flight is now scheduled to leave at 4 in the morning.' What time is the plane scheduled to leave?", options:["16:00","04:00","14:00","08:00"], answer:"04:00", explanation:"4 in the morning = 04:00." },
+      { id:"lp2-2", set:"lpractice2", setName:"Literacy Practice 2", type:"mcq", question:"Surgery at 07:30. Anaesthetic 20 minutes before surgery. What time is anaesthetic administered?", options:["07:00","19:10","17:00","07:10"], answer:"07:10", explanation:"07:30 − 20 min = 07:10." },
+      { id:"lp2-3", set:"lpractice2", setName:"Literacy Practice 2", type:"mcq", question:"Ward manager: signs in, then grabs coffee, checks notes from previous shift, reads emails. Before briefing, walks the ward. Last task: management meeting. Correct order?", options:["Sign in; coffee; check notes; emails; check ward; brief team; meeting","Sign in; check notes; coffee; brief team; emails; meeting; check ward","Coffee; sign in; emails; check notes; brief team; check ward; meeting","Sign in; coffee; brief team; check notes; check ward; emails; meeting"], answer:"Sign in; coffee; check notes; emails; check ward; brief team; meeting", explanation:"Sign in → coffee → check notes → emails → check ward → brief team → meeting." },
+      { id:"lp2-4", set:"lpractice2", setName:"Literacy Practice 2", type:"mcq", question:"Passage: 'Their not ready…the proffessor declared…None of them have done enough practise!' How many errors?", options:["3","1","2","0"], answer:"2", explanation:"'Their' should be 'They're', and 'proffessor' should be 'professor'." },
+      { id:"lp2-5", set:"lpractice2", setName:"Literacy Practice 2", type:"mcq", question:"Identify the correct sentence:", options:["The dentist asked me to lay down. Then the drilling began.","The dentist asked me to lie down. Then the drilling begun.","The dentist asked me to laid down. Then the drilling began.","The dentist asked me to lie down. Then the drilling began."], answer:"The dentist asked me to lie down. Then the drilling began.", explanation:"'Lie down' (recline) and 'began' (past tense of begin) are both correct." },
+      { id:"lp2-6", set:"lpractice2", setName:"Literacy Practice 2", type:"mcq", question:"Identify the correct sentence:", options:["I was running out of patience with Luke. 'The way your going, there's no turning back.'","I was running out of patients with Luke. 'The way you're going, theres no turning back.'","I was running out of patience with Luke. 'The way you're going, there's no turning back.'","I was running out of patients with Luke. 'The way you're going, there's no turning back.'"], answer:"I was running out of patience with Luke. 'The way you're going, there's no turning back.'", explanation:"'Patience' (tolerance), 'you're' (you are), 'there's' (there is) all correct." },
+      { id:"lp2-7", set:"lpractice2", setName:"Literacy Practice 2", type:"mcq", question:"The writer believes students get higher marks by replicating the lecturer's writing style. True, False or Impossible to say?", options:["True","False","Impossible to say"], answer:"True", explanation:"The passage states lecturers give higher grades to those who replicate their work." },
+      { id:"lp2-8", set:"lpractice2", setName:"Literacy Practice 2", type:"mcq", question:"According to the passage, there is no point grading fiction. True, False or Impossible to say?", options:["True","False","Impossible to say"], answer:"True", explanation:"The passage says grading fiction 'seems utterly benign'." },
+      { id:"lp2-9", set:"lpractice2", setName:"Literacy Practice 2", type:"mcq", question:"Meeting lecturers at the pub will NOT improve your grade. True, False or Impossible to say?", options:["True","False","Impossible to say"], answer:"False", explanation:"The passage says lecturers give higher grades to those who 'meet up at the pub after classes'." },
+      { id:"lp3-1", set:"lpractice3", setName:"Literacy Practice 3", type:"mcq", question:"Dr Jacobsen voicemail: 'I will need to move the surgery to 2pm, so I won't require the prep team until half past twelve.' What time is the surgery?", options:["11:30","02:00am","12:30","14:00"], answer:"14:00", explanation:"Surgery rescheduled to 2pm = 14:00." },
+      { id:"lp3-2", set:"lpractice3", setName:"Literacy Practice 3", type:"mcq", question:"According to the jewellery shop passage, how old was the young girl?", options:["No older than 20","Fifteen","No older than 25","Thirteen"], answer:"No older than 20", explanation:"The passage states 'No older than 20'." },
+      { id:"lp3-3", set:"lpractice3", setName:"Literacy Practice 3", type:"mcq", question:"Railway passage: Where was the first steam locomotive used?", options:["Germany","France","Britain","Spain"], answer:"Britain", explanation:"'The first steam locomotive was used in Britain.'" },
+      { id:"lp3-4", set:"lpractice3", setName:"Literacy Practice 3", type:"mcq", question:"Railway passage: What was the main reason the Railway was created?", options:["Protect the environment","Fill a void","Reduce carbon emissions","Create transport for middle classes"], answer:"Fill a void", explanation:"'The railway filled a void that other forms of transport could not.'" },
+      { id:"lp3-5", set:"lpractice3", setName:"Literacy Practice 3", type:"mcq", question:"Railway passage: In what year did the first steam locomotive run?", options:["1800","1901","1821","1804"], answer:"1804", explanation:"'In 1804, the first successful steam locomotive ran on wheels.'" },
+      { id:"lp3-6", set:"lpractice3", setName:"Literacy Practice 3", type:"mcq", question:"Railway passage: What did the 1921 Act introduce?", options:["British Railways","Great British Railways","The Four Rails","British Rail"], answer:"British Rail", explanation:"The 1921 Act merged four companies known as 'British Rail'." },
+      { id:"lp3-7", set:"lpractice3", setName:"Literacy Practice 3", type:"mcq", question:"Which word describes something not deterred by danger, pain or death?", options:["Courageous","Captivated","Berserk","Belittled"], answer:"Courageous", explanation:"Courageous = brave in the face of danger." },
+      { id:"lp3-8", set:"lpractice3", setName:"Literacy Practice 3", type:"mcq", question:"Which word describes a secret plan to commit something illegal?", options:["Speculation","Deify","Decode","Conspiracy"], answer:"Conspiracy", explanation:"Conspiracy = a secret plan to commit an illegal act." },
+      { id:"lp3-9", set:"lpractice3", setName:"Literacy Practice 3", type:"mcq", question:"Which word describes two things occurring at the same time or in a similar way?", options:["Parallel","Inclination","Downfall","Causation"], answer:"Parallel", explanation:"Parallel = occurring simultaneously or in a similar manner." },
+      { id:"lp3-10", set:"lpractice3", setName:"Literacy Practice 3", type:"mcq", question:"Which word describes something kept or done in secret?", options:["Berate","Clandestine","Blasphemous","Precociously"], answer:"Clandestine", explanation:"Clandestine = done secretly." }
+    ],
+    mock: [
+      { id:"lm1-1", set:"lmock1", setName:"Literacy Mock 1", type:"mcq", question:"Karen (NHS admin): switches on computers before checking post, then kettle, answerphone after manager brief. Correct order?", options:["Computers; Kettle; Post; Answerphone; Brief From Manager","Post; Kettle; Computers; Brief From Manager; Answerphone","Computers; Post; Kettle; Brief From Manager; Answerphone","Computers; Post; Kettle; Answerphone; Brief From Manager"], answer:"Computers; Post; Kettle; Brief From Manager; Answerphone", explanation:"Computers → Post → Kettle → Brief from Manager → Answerphone." },
+      { id:"lm1-2", set:"lmock1", setName:"Literacy Mock 1", type:"mcq", question:"Robert (procurement): coffee before emails, suppliers before post, meeting before project. Correct order?", options:["Coffee; Emails; Suppliers; Post; Meeting; Project","Emails; Coffee; Suppliers; Post; Meeting; Project","Coffee; Suppliers; Emails; Post; Project; Meeting","Emails; Coffee; Post; Suppliers; Meeting; Project"], answer:"Coffee; Emails; Suppliers; Post; Meeting; Project", explanation:"Coffee → Emails → Suppliers → Post → Meeting → Project." },
+      { id:"lm1-3", set:"lmock1", setName:"Literacy Mock 1", type:"mcq", question:"NHS passage: 'profesionals' is misspelt. Correct spelling?", options:["professionals","profesionnals","proffessionals","proffesionnals"], answer:"professionals", explanation:"The correct spelling is 'professionals'." },
+      { id:"lm1-4", set:"lmock1", setName:"Literacy Mock 1", type:"mcq", question:"Alcohol test passage: 'leeflet' is misspelt. Which word is wrong?", options:["concussion","leeflet","associated","assessing"], answer:"leeflet", explanation:"'Leeflet' should be 'leaflet'." },
+      { id:"lm1-5", set:"lmock1", setName:"Literacy Mock 1", type:"mcq", question:"Public Health England passage: which word is misspelt?", options:["Intelligence","Partnerships","Science","Wellbeen"], answer:"Wellbeen", explanation:"'Wellbeen' is not a word — should be 'wellbeing'." },
+      { id:"lm2-1", set:"lmock2", setName:"Literacy Mock 2", type:"mcq", question:"Text: 'Dr Ali's train cancelled. Next train arrives at 15:35 which he will catch.' What time does Dr Ali arrive?", options:["13:45","03:15","15:35","14:15"], answer:"15:35", explanation:"He catches the train arriving at 15:35." },
+      { id:"lm2-2", set:"lmock2", setName:"Literacy Mock 2", type:"mcq", question:"Steve: 521cal breakfast + 427cal lunch + 100cal dessert = 1048cal used. 452cal left for dinner. Which option fits? (Roast Beef 626, Lasagne 555, Jacket & Salad 421, Minced Beef 510, Cod & Chips 435)", options:["Roast Beef 626 cal","Lasagne 555cal","Jacket & Salad 421cal","Minced Beef & Veg 510cal"], answer:"Jacket & Salad 421cal", explanation:"Only options under 452 cal fit: Jacket & Salad (421) and Cod & Chips (435). Jacket & Salad is the safest choice." },
+      { id:"lm2-3", set:"lmock2", setName:"Literacy Mock 2", type:"mcq", question:"City/rat passage: What type of narration is it written in?", options:["First person","Second person","Third person","Mixture of all three"], answer:"First person", explanation:"Uses 'I' throughout — first person narration." },
+      { id:"lm2-4", set:"lmock2", setName:"Literacy Mock 2", type:"mcq", question:"City/rat passage: What literary technique is used TWICE in paragraph 1? ('beautiful backstreets bustle', 'scamper, satisfied')", options:["Metaphor","Simile","Personification","Alliteration"], answer:"Alliteration", explanation:"Alliteration: 'beautiful backstreets bustle' and 'scamper, satisfied'." },
+      { id:"lm2-5", set:"lmock2", setName:"Literacy Mock 2", type:"mcq", question:"City/rat passage: 'I pleaded with myself... to no avail.' What does 'to no avail' mean?", options:["Fruitless","Consequential","Pointless","Worthwhile"], answer:"Fruitless", explanation:"'To no avail' = without success = fruitless." }
+    ]
+  }
+};
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let state = {
+  topic: null,
+  setKey: null,
+  setName: null,
+  mode: null,         // 'warmup' | 'practice' | 'mock'
+  questions: [],
+  currentIndex: 0,
+  answers: [],        // {q, userAnswer, correct}
+  answered: false,
+  timer: null,
+  timeLeft: 25 * 60
+};
+
+// ═══════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ═══════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+//  HOME
+// ═══════════════════════════════════════════════
+function selectTopic(topic) {
+  state.topic = topic;
+  document.querySelectorAll('.topic-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector(`[data-topic="${topic}"]`).classList.add('selected');
+  document.getElementById('homeNext').style.display = 'block';
+}
+
+function goToSetSelect() {
+  if (!state.topic) return;
+  buildSetList();
+  document.getElementById('ssTitle').textContent = state.topic === 'numeracy' ? 'Numeracy Tests' : 'Literacy Tests';
+  document.getElementById('ssTopicTag').textContent = state.topic.toUpperCase();
+  showScreen('setselect');
+}
+
+// ═══════════════════════════════════════════════
+//  SET SELECT
+// ═══════════════════════════════════════════════
+function buildSetList() {
+  const container = document.getElementById('setListContainer');
+  const topicData = DATA[state.topic];
+  container.innerHTML = '';
+
+  // Group by category (warmup / practice / mock)
+  const groups = {
+    warmup: { label: '🔥 Warm-Up', sets: {} },
+    practice: { label: '📝 Practice Tests', sets: {} },
+    mock: { label: '⏱ Mock Tests', sets: {} }
+  };
+
+  Object.keys(groups).forEach(cat => {
+    const qs = topicData[cat] || [];
+    qs.forEach(q => {
+      if (!groups[cat].sets[q.set]) {
+        groups[cat].sets[q.set] = { name: q.setName, count: 0, key: q.set, cat };
+      }
+      groups[cat].sets[q.set].count++;
+    });
+  });
+
+  Object.entries(groups).forEach(([cat, grp]) => {
+    const sets = Object.values(grp.sets);
+    if (!sets.length) return;
+
+    const groupEl = document.createElement('div');
+    groupEl.className = 'set-group';
+    groupEl.innerHTML = `<div class="set-group-title">${grp.label}</div><div class="set-list" id="sl-${cat}"></div>`;
+    container.appendChild(groupEl);
+
+    const list = groupEl.querySelector(`#sl-${cat}`);
+    sets.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'set-item';
+      item.innerHTML = `
+        <div class="set-item-left">
+          <div class="set-item-name">${s.name}</div>
+          <div class="set-item-meta">${s.count} question${s.count !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="set-item-arrow">→</div>
+      `;
+      item.onclick = () => selectSet(s.key, s.name, cat, s.count);
+      list.appendChild(item);
+    });
+  });
+}
+
+function selectSet(setKey, setName, cat, count) {
+  state.setKey = setKey;
+  state.setName = setName;
+
+  // Build mode screen
+  document.getElementById('mhTopic').textContent = state.topic.toUpperCase();
+  document.getElementById('mhSet').textContent = setName;
+  document.getElementById('mhCount').textContent = `${count} questions`;
+
+  buildModeCards(cat);
+  showScreen('modeselect');
+}
+
+// ═══════════════════════════════════════════════
+//  MODE SELECT
+// ═══════════════════════════════════════════════
+function buildModeCards(defaultCat) {
+  const container = document.getElementById('modeCards');
+  container.innerHTML = '';
+
+  const modes = [
+    {
+      mode: 'warmup',
+      cls: 'mode-warmup',
+      icon: '🔥',
+      name: 'Warm-Up Mode',
+      desc: 'Type-in answers with instant feedback after each question',
+      badge: 'Input • Instant',
+      available: defaultCat === 'warmup'
+    },
+    {
+      mode: 'practice',
+      cls: 'mode-practice',
+      icon: '📝',
+      name: 'Practice Mode',
+      desc: 'Multiple choice with immediate answer validation',
+      badge: 'MCQ • Instant',
+      available: true
+    },
+    {
+      mode: 'mock',
+      cls: 'mode-mock',
+      icon: '⏱',
+      name: 'Mock Exam Mode',
+      desc: 'Timed 25-minute exam — results shown only at the end',
+      badge: '25 MIN TIMED',
+      available: true
+    }
+  ];
+
+  modes.forEach(m => {
+    if (!m.available && defaultCat !== 'warmup') return;
+
+    const card = document.createElement('div');
+    card.className = `mode-card ${m.cls}`;
+    card.innerHTML = `
+      <div class="mode-card-icon">${m.icon}</div>
+      <div class="mode-card-text">
+        <div class="mode-card-name">${m.name}</div>
+        <div class="mode-card-desc">${m.desc}</div>
+      </div>
+      <div class="mode-card-badge">${m.badge}</div>
+    `;
+    card.onclick = () => startQuiz(m.mode);
+    container.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  QUIZ ENGINE
+// ═══════════════════════════════════════════════
+function startQuiz(mode) {
+  state.mode = mode;
+  state.currentIndex = 0;
+  state.answers = [];
+  state.answered = false;
+  clearTimer();
+
+  // Get questions for this set from the right category
+  const cat = mode === 'warmup' ? 'warmup'
+            : mode === 'practice' ? 'practice'
+            : 'mock';
+
+  let qs = (DATA[state.topic][cat] || []).filter(q => q.set === state.setKey);
+
+  // If no questions in that exact category for this set, use all topic questions for that mode
+  if (!qs.length) {
+    // Fallback: if mock mode selected on a non-mock set, grab all mock questions
+    qs = DATA[state.topic][cat] || [];
+  }
+
+  // Shuffle for mock
+  if (mode === 'mock') {
+    qs = [...qs].sort(() => Math.random() - 0.5);
+  }
+
+  state.questions = qs;
+
+  // Header
+  document.getElementById('qSetName').textContent = state.setName;
+  document.getElementById('qModeTag').textContent =
+    mode === 'warmup' ? '🔥 Warm-Up' :
+    mode === 'practice' ? '📝 Practice' : '⏱ Mock Exam';
+
+  // Timer for mock
+  if (mode === 'mock') {
+    state.timeLeft = 25 * 60;
+    document.getElementById('qTimer').classList.remove('hidden');
+    updateTimerDisplay();
+    state.timer = setInterval(tickTimer, 1000);
+  } else {
+    document.getElementById('qTimer').classList.add('hidden');
+  }
+
+  showScreen('quiz');
+  renderQuestion();
+}
+
+function tickTimer() {
+  state.timeLeft--;
+  updateTimerDisplay();
+  if (state.timeLeft <= 0) {
+    clearTimer();
+    endQuiz();
+  }
+  if (state.timeLeft <= 60) {
+    document.getElementById('qTimer').classList.add('urgent');
+  }
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(state.timeLeft / 60).toString().padStart(2, '0');
+  const s = (state.timeLeft % 60).toString().padStart(2, '0');
+  document.getElementById('qTimer').textContent = `${m}:${s}`;
+}
+
+function clearTimer() {
+  if (state.timer) { clearInterval(state.timer); state.timer = null; }
+}
+
+function renderQuestion() {
+  const q = state.questions[state.currentIndex];
+  if (!q) { endQuiz(); return; }
+
+  state.answered = false;
+
+  // Progress
+  const pct = ((state.currentIndex) / state.questions.length * 100).toFixed(0);
+  document.getElementById('qProgressFill').style.width = pct + '%';
+  document.getElementById('qProgressLabel').textContent = `${state.currentIndex + 1} / ${state.questions.length}`;
+  document.getElementById('qCounter').textContent = `Question ${state.currentIndex + 1} of ${state.questions.length}`;
+
+  // Question text
+  document.getElementById('qText').textContent = q.question;
+
+  // Reset feedback
+  const fb = document.getElementById('feedbackBox');
+  fb.className = 'feedback-box';
+  fb.style.display = 'none';
+
+  // Show correct input type
+  const optGrid = document.getElementById('optionsGrid');
+  const inputWrap = document.getElementById('inputWrap');
+
+  if (q.type === 'input') {
+    optGrid.classList.add('hidden');
+    inputWrap.classList.remove('hidden');
+    const field = document.getElementById('inputField');
+    field.value = '';
+    field.className = 'input-field';
+    field.disabled = false;
+    field.focus();
+    field.onkeydown = (e) => { if (e.key === 'Enter' && !state.answered) submitInput(); };
+  } else {
+    inputWrap.classList.add('hidden');
+    optGrid.classList.remove('hidden');
+    renderOptions(q);
+  }
+
+  renderActions();
+}
+
+function renderOptions(q) {
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  const letters = ['A','B','C','D','E'];
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.dataset.value = opt;
+    btn.innerHTML = `<span class="option-letter">${letters[i]}</span><span>${opt}</span>`;
+    btn.onclick = () => selectOption(btn, opt, q);
+    grid.appendChild(btn);
+  });
+}
+
+function selectOption(btn, val, q) {
+  if (state.answered) return;
+
+  if (state.mode === 'mock') {
+    // In mock: just highlight selection, no feedback
+    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    // Store tentative answer (will be confirmed on Next)
+    state._pendingAnswer = val;
+    renderActions();
+  } else {
+    // Practice: immediate feedback
+    state.answered = true;
+    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+
+    const correct = val === q.answer;
+    btn.classList.add(correct ? 'correct' : 'wrong');
+
+    if (!correct) {
+      // Highlight correct answer
+      document.querySelectorAll('.option-btn').forEach(b => {
+        if (b.dataset.value === q.answer) b.classList.add('correct');
+      });
+    }
+
+    showFeedback(correct, q.explanation, q.answer);
+    recordAnswer(q, val, correct);
+    renderActions();
+  }
+}
+
+function submitInput() {
+  const q = state.questions[state.currentIndex];
+  const field = document.getElementById('inputField');
+  const raw = field.value.trim();
+  if (!raw) return;
+
+  state.answered = true;
+  field.disabled = true;
+
+  const normalise = v => v.replace(/[£,\s]/g, '').toLowerCase();
+  const correct = q.acceptedAnswers.some(a => normalise(a) === normalise(raw));
+
+  field.className = 'input-field ' + (correct ? 'correct' : 'wrong');
+  showFeedback(correct, `Correct answer: ${q.answer}`, q.answer);
+  recordAnswer(q, raw, correct);
+  renderActions();
+}
+
+function showFeedback(correct, explanation, correctAnswer) {
+  if (state.mode === 'mock') return; // No feedback in mock
+
+  const fb = document.getElementById('feedbackBox');
+  fb.className = 'feedback-box ' + (correct ? 'correct' : 'wrong') + ' show';
+  fb.style.display = 'block';
+
+  document.getElementById('feedbackStatus').innerHTML =
+    correct ? '✓ Correct!' : `✗ Incorrect — correct answer: <strong>${correctAnswer}</strong>`;
+  document.getElementById('feedbackExp').textContent = explanation || '';
+}
+
+function recordAnswer(q, userAnswer, correct) {
+  state.answers.push({ q, userAnswer, correct });
+}
+
+function renderActions() {
+  const actions = document.getElementById('quizActions');
+  actions.innerHTML = '';
+  const q = state.questions[state.currentIndex];
+  const isLast = state.currentIndex === state.questions.length - 1;
+
+  if (state.mode === 'mock') {
+    // In mock, show Next/Submit without answering required
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-primary btn-full';
+    btn.textContent = isLast ? 'Submit Exam' : 'Next Question →';
+    btn.onclick = () => {
+      // Record mock answer
+      if (state._pendingAnswer !== undefined) {
+        const correct = state._pendingAnswer === q.answer;
+        recordAnswer(q, state._pendingAnswer, correct);
+        state._pendingAnswer = undefined;
+      } else {
+        // Skipped
+        recordAnswer(q, '', false);
+      }
+      // Clear selections
+      document.querySelectorAll('.option-btn').forEach(b => {
+        b.classList.remove('selected');
+        b.disabled = false;
+      });
+      if (isLast) endQuiz();
+      else { state.currentIndex++; renderQuestion(); }
+    };
+    actions.appendChild(btn);
+  } else {
+    // Warmup / Practice
+    if (!state.answered) {
+      if (q.type === 'input') {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-primary';
+        btn.textContent = 'Check Answer';
+        btn.onclick = submitInput;
+        actions.appendChild(btn);
+      }
+      // MCQ: options handle submission
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-primary btn-full';
+      btn.textContent = isLast ? 'See Results →' : 'Next Question →';
+      btn.onclick = () => {
+        if (isLast) endQuiz();
+        else { state.currentIndex++; renderQuestion(); }
+      };
+      actions.appendChild(btn);
+    }
+  }
+}
+
+function confirmQuit() {
+  if (confirm('Quit this session? Progress will be lost.')) {
+    clearTimer();
+    showScreen('setselect');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  RESULTS
+// ═══════════════════════════════════════════════
+function endQuiz() {
+  clearTimer();
+
+  const total = state.answers.length;
+  const correct = state.answers.filter(a => a.correct).length;
+  const pct = total ? Math.round((correct / total) * 100) : 0;
+
+  document.getElementById('rLabel').textContent = `${state.setName} · ${state.mode.toUpperCase()} MODE`;
+  document.getElementById('rScore').textContent = pct + '%';
+  document.getElementById('rFraction').textContent = `${correct} out of ${total} correct`;
+
+  const fill = document.getElementById('rFill');
+  fill.style.width = '0%';
+  setTimeout(() => fill.style.width = pct + '%', 100);
+  fill.className = 'results-percent-fill ' + (pct >= 80 ? 'great' : pct >= 60 ? 'ok' : 'low');
+
+  const msgs = pct >= 80
+    ? ['Excellent work! You\'re well prepared.', 'Outstanding performance!', 'Great score — keep it up!']
+    : pct >= 60
+    ? ['Good effort — review any mistakes.', 'Solid attempt, some areas to improve.']
+    : ['Keep practising — you\'ll get there.', 'Review the explanations and try again.'];
+  document.getElementById('rMsg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+
+  // Breakdown
+  const breakdown = document.getElementById('rBreakdown');
+  const list = document.getElementById('rBreakdownList');
+  list.innerHTML = '';
+
+  if (state.answers.length > 0) {
+    breakdown.style.display = 'block';
+    state.answers.forEach((a, i) => {
+      const item = document.createElement('div');
+      item.className = 'breakdown-item';
+      const preview = a.q.question.length > 80
+        ? a.q.question.slice(0, 80) + '…'
+        : a.q.question;
+
+      item.innerHTML = `
+        <div class="breakdown-icon ${a.correct ? 'c' : 'w'}">${a.correct ? '✓' : '✗'}</div>
+        <div class="breakdown-q">
+          <strong>Q${i+1}: ${preview}</strong>
+          ${!a.correct ? `<div class="breakdown-correct-ans">✓ ${a.q.answer}</div>` : ''}
+          ${a.q.explanation ? `<span>${a.q.explanation}</span>` : ''}
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  } else {
+    breakdown.style.display = 'none';
+  }
+
+  showScreen('results');
+}
+
+function retryQuiz() {
+  startQuiz(state.mode);
+}
+</script>
+</body>
+</html>
